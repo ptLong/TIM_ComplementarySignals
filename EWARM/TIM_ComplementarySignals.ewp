@@ -1037,6 +1037,12 @@
       <name>$PROJ_DIR$\..\bitband.h</name>
     </file>
     <file>
+      <name>$PROJ_DIR$\..\GES_Solar_RTC.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\GES_Solar_RTC.h</name>
+    </file>
+    <file>
       <name>$PROJ_DIR$\..\HD44780.c</name>
     </file>
     <file>

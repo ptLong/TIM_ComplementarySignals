@@ -5,11 +5,11 @@
 #include "math.h"
 #include "hd44780.h"
 #include "bitband.h"
-
+#include "GES_Solar_RTC.h"
 
 #define BATT_FULL_VOLTAGE	29.8
 #define CHARGER_STOP_VOLTAGE	BATT_FULL_VOLTAGE
-#define CHARGER_START_VOLTAGE	27.2
+#define CHARGER_START_VOLTAGE	26.8
 
 //#define USE_STDPERIPH_DRIVER
 //#define STM32F4XX

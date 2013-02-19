@@ -23,7 +23,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_it.h"
-
+#include "main.h"
 /** @addtogroup STM32F4_Discovery_Peripheral_Examples
   * @{
   */
@@ -39,6 +39,9 @@
 
 extern uint16_t msTicks;
 
+extern __IO uint32_t PeriodValue;
+extern __IO uint32_t CaptureNumber;
+uint16_t tmpCC4[2] = {0, 0};
 /* Private function prototypes -----------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
 
@@ -189,9 +192,48 @@ void RTC_Alarm_IRQHandler(void)
     STM_EVAL_LEDToggle(LED5);
     RTC_ClearITPendingBit(RTC_IT_ALRA);
     EXTI_ClearITPendingBit(EXTI_Line17);
-  } 
+  }
 }
 
+
+/**
+  * @brief  This function handles RTC Wakeup global interrupt request.
+  * @param  None
+  * @retval None
+  */
+void RTC_WKUP_IRQHandler(void)
+{
+  if(RTC_GetITStatus(RTC_IT_WUT) != RESET)
+  {
+    /* Toggle on LED3 */
+    STM_EVAL_LEDToggle(LED3);
+    RTC_ClearITPendingBit(RTC_IT_WUT);
+    EXTI_ClearITPendingBit(EXTI_Line22);
+  }
+}
+
+/**
+  * @brief  This function handles TIM5 global interrupt request.
+  * @param  None
+  * @retval None
+  */
+void TIM5_IRQHandler(void)
+{
+  if (TIM_GetITStatus(TIM5, TIM_IT_CC4) != RESET)
+  {
+    /* Get the Input Capture value */
+    tmpCC4[CaptureNumber++] = TIM_GetCapture4(TIM5);
+
+    /* Clear CC4 Interrupt pending bit */
+    TIM_ClearITPendingBit(TIM5, TIM_IT_CC4);
+
+    if (CaptureNumber >= 2)
+    {
+      /* Compute the period length */
+      PeriodValue = (uint16_t)(0xFFFF - tmpCC4[0] + tmpCC4[1] + 1);
+    }
+  }
+}
 
 
 

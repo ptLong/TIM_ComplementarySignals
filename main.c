@@ -139,7 +139,7 @@ uint16_t current_PWM, up_PWM, down_PWM, upup_PWM, downdown_PWM;
 
 uint16_t find_local_MPPT_point(struct SolarMPPT * vars){
 	const uint16_t delta_PWM = 8;
-	
+
 
 	current_PWM = vars->current_PWM_charger;
 	up_PWM = current_PWM + delta_PWM;
@@ -149,7 +149,7 @@ uint16_t find_local_MPPT_point(struct SolarMPPT * vars){
 	if((down_PWM<18) || (downdown_PWM<18)){
 		down_PWM = 18;
 		downdown_PWM = 18;
-		
+
 	}
 
 	//set_PWM_charger(current_PWM);
@@ -166,13 +166,13 @@ uint16_t find_local_MPPT_point(struct SolarMPPT * vars){
 	//vars->feedback_local_down = get_current_feedback();
 
 	set_PWM_charger(current_PWM); //very important to set PWM back to current
-	
+
 	if(vars->feedback_local_current < vars->feedback_local_down)
 	{
 		printf("---down local MPPT --- \n");
-		printf("%.2f %.2f %.2f \n", 
-				vars->feedback_local_down, 
-				vars->feedback_local_current, 
+		printf("%.2f %.2f %.2f \n",
+				vars->feedback_local_down,
+				vars->feedback_local_current,
 				vars->feedback_local_up);
 		printf("%d %d %d \n", down_PWM, current_PWM, up_PWM);
 		set_PWM_charger(current_PWM-1);
@@ -180,9 +180,9 @@ uint16_t find_local_MPPT_point(struct SolarMPPT * vars){
 	if( vars->feedback_local_current < vars->feedback_local_up)
 	{
 		printf("---up local MPPT --- \n");
-		printf("%.2f %.2f %.2f \n", 
-				vars->feedback_local_down, 
-				vars->feedback_local_current, 
+		printf("%.2f %.2f %.2f \n",
+				vars->feedback_local_down,
+				vars->feedback_local_current,
 				vars->feedback_local_up);
 		printf("%d %d %d \n", down_PWM, current_PWM, up_PWM);
 		set_PWM_charger(current_PWM+1);
@@ -215,7 +215,9 @@ int main(void)
 
 	Adc_enter_default_config();
 
-  	_delay_ms(200);
+	RTC_to_default_state();
+
+  	_delay_ms(300);
 	LCD_Init();
 
 
@@ -231,14 +233,14 @@ int main(void)
 	} else {
 		DIGITAL_OUTPUT_LOW(D_OUT1);
 	}
-	
+
 	//all 100ms tasks go here
 	if(MPPTVars.ms100_flag){
 		MPPTVars.ms100_flag = 0;
 		cal_adc();
 	}
 
-	
+
 	if(MPPTVars.ms1000_flag){
 		MPPTVars.ms1000_flag = 0;
 
@@ -258,7 +260,7 @@ int main(void)
 
 	//SET_PULSE_CHANNEL_B(Channel2Pulse);
 
-	
+
 	if(SolarCharger.do_global_MPPT){
 		find_global_MPPT_point(&SolarCharger);
 		SolarCharger.do_global_MPPT = 0;
@@ -269,7 +271,7 @@ int main(void)
 	}
 	if(SolarCharger.en_manual_MPPT){
 		set_PWM_charger(SolarCharger.manual_PWM_charger);
-		
+
 		if(GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_0)){
 			SolarCharger.manual_PWM_charger+=1;
 			_delay_ms(300);
@@ -295,38 +297,43 @@ int main(void)
 		EnableSolarCharger();
 	};
 
-	
+
   }
 }
 
 void DisplayLCD(void){
-	LCD_GotoXY(0,0);
-	LCD_printf("PS= %.0fW ", MPPTVars.PSolar);
-	LCD_GotoXY(10,0);
-	LCD_printf("PB= %.0fW", MPPTVars.PBatt);
 	LCD_GotoXY(0,1);
-	LCD_printf("Solar= %.2fV %.2fA ", MPPTVars.VSolar, MPPTVars.ISolar, MPPTVars.PSolar);
+	LCD_printf("Solar=%.1fV ", MPPTVars.VSolar);
+	LCD_GotoXY(11,1);
+	LCD_printf(" P= %.0fW", MPPTVars.PBatt);
+	LCD_GotoXY(0,0);
+	//LCD_printf("Solar= %.2fV %.2fA ", MPPTVars.VSolar, MPPTVars.ISolar, MPPTVars.PSolar);
+	RTC_GetTime(RTC_Format_BIN, &RTC_TimeStructure);
+	LCD_printf("Time: %0.2d:%0.2d:%0.2d",RTC_TimeStructure.RTC_Hours,
+		   		RTC_TimeStructure.RTC_Minutes,
+				RTC_TimeStructure.RTC_Seconds);
 
 	LCD_GotoXY(0,2);
-	LCD_printf("Batt=  %.2fV %.2fA ",MPPTVars.VBatt, MPPTVars.IBatt, MPPTVars.PBatt);
+	LCD_printf("Batt= %.1fV %.1fA ",MPPTVars.VBatt, MPPTVars.IBatt, MPPTVars.PBatt);
 
 	LCD_GotoXY(0,3);
 	LCD_printf("%5d", msTicks);
 
 	LCD_GotoXY(6,3);
 	LCD_printf("%5d",TIM1->CCR1);
-	
+
 	LCD_GotoXY(5,3);
 
-	
+
 	LCD_GotoXY(12,3);
 	if(SolarCharger.batt_full){
-		
+
 		LCD_printf("BattFull");
-	} else {
+	} else {
+
 		LCD_printf("Charging");
 	}
-	
+
 }
 
 void set_PWM_charger(uint16_t pwm){
@@ -343,11 +350,11 @@ void set_PWM_charger(uint16_t pwm){
 	}
 
 	SET_PULSE_CHANNEL_A(pulse);
-	
+
 }
 
 
-#define DELTA_ADC_CNT 	300	
+#define DELTA_ADC_CNT 	300
 volatile int testPoint;
 
 void cal_adc()
@@ -360,7 +367,7 @@ void cal_adc()
 	for (i=0; i<ADC_NUM_OF_CHANNEL; i++){
 		ADCSum=0;
 		for(j=i; j<ADC_BUFF_SIZE; j += ADC_NUM_OF_CHANNEL){
-		
+
 			ADCSum+= ADC12DualConvertedBuff[j];
 		}
 		ADCRaw_avg[i] = ADCSum/ADC_NUM_OF_SAMPLE;
@@ -370,26 +377,26 @@ void cal_adc()
 	for (i=0; i<ADC_NUM_OF_CHANNEL; i++){
 		ADCSum=0;
 		num_of_out_adc_range_value = 0;
-		
+
 		for(j=i; j<ADC_BUFF_SIZE; j += ADC_NUM_OF_CHANNEL){
 			tmp_buff = ADC12DualConvertedBuff[j];
-			
+
 			//check for out of range ADC value
 			if((((int32_t)ADCRaw_avg[i] - tmp_buff)>DELTA_ADC_CNT)
 				|| ((tmp_buff - (int32_t)ADCRaw_avg[i])>DELTA_ADC_CNT)) {
 				num_of_out_adc_range_value +=1;
 
 			} else {
-				
+
 				ADCSum+= tmp_buff;
 			}
 		}
-		
+
 		ADCRaw_avg[i] = ADCSum/(ADC_NUM_OF_SAMPLE-num_of_out_adc_range_value);
 	}
-	
+
 	*/
-	
+
 	testPoint = 0;
 
 	MPPTVars.VBatt = (float)ADCRaw_avg[1]/ADC_COUNTS_FOR_VBATT_1V;
@@ -582,7 +589,7 @@ void DisableSolarCharger(void){
 	TIM_Cmd(TIM1, DISABLE);
 	TIM_SetCounter(TIM1,0);
 	TIM_CtrlPWMOutputs(TIM1,DISABLE);
-	
+
 }
 
 ADC_InitTypeDef 	  ADC_InitStructure;
