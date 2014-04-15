@@ -23,6 +23,10 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_it.h"
+#include "main.h"
+#include "usb_bsp.h"
+#include "usb_hcd_int.h"
+#include "usbh_core.h"
 
 /** @addtogroup STM32F4_Discovery_Peripheral_Examples
   * @{
@@ -38,6 +42,17 @@
 /* Private variables ---------------------------------------------------------*/
 
 extern uint16_t msTicks;
+
+extern __IO uint32_t PeriodValue;
+extern __IO uint32_t CaptureNumber;
+uint16_t tmpCC4[2] = {0, 0};
+
+
+extern USB_OTG_CORE_HANDLE          USB_OTG_Core;
+extern USBH_HOST                    USB_Host;
+ 
+/* Private function prototypes -----------------------------------------------*/
+extern void USB_OTG_BSP_TimerIRQ (void);
 
 /* Private function prototypes -----------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
@@ -189,8 +204,91 @@ void RTC_Alarm_IRQHandler(void)
     STM_EVAL_LEDToggle(LED5);
     RTC_ClearITPendingBit(RTC_IT_ALRA);
     EXTI_ClearITPendingBit(EXTI_Line17);
-  } 
+  }
 }
+
+
+/**
+  * @brief  This function handles RTC Wakeup global interrupt request.
+  * @param  None
+  * @retval None
+  */
+void RTC_WKUP_IRQHandler(void)
+{
+  if(RTC_GetITStatus(RTC_IT_WUT) != RESET)
+  {
+    /* Toggle on LED3 */
+    //STM_EVAL_LEDToggle(LED3);
+    RTC_ClearITPendingBit(RTC_IT_WUT);
+    EXTI_ClearITPendingBit(EXTI_Line22);
+  }
+}
+
+/**
+  * @brief  This function handles TIM5 global interrupt request.
+  * @param  None
+  * @retval None
+  */
+void TIM5_IRQHandler(void)
+{
+  if (TIM_GetITStatus(TIM5, TIM_IT_CC4) != RESET)
+  {
+    /* Get the Input Capture value */
+    tmpCC4[CaptureNumber++] = TIM_GetCapture4(TIM5);
+
+    /* Clear CC4 Interrupt pending bit */
+    TIM_ClearITPendingBit(TIM5, TIM_IT_CC4);
+
+    if (CaptureNumber >= 2)
+    {
+      /* Compute the period length */
+      PeriodValue = (uint16_t)(0xFFFF - tmpCC4[0] + tmpCC4[1] + 1);
+    }
+  }
+}
+
+/**
+  * @brief  EXTI1_IRQHandler
+  *         This function handles External line 1 interrupt request.
+  * @param  None
+  * @retval None
+  */
+void EXTI1_IRQHandler(void)
+{
+  if(EXTI_GetITStatus(EXTI_Line1) != RESET)
+  {
+      USB_Host.usr_cb->OverCurrentDetected();
+      EXTI_ClearITPendingBit(EXTI_Line1);
+  }
+}
+
+
+/**
+  * @brief  TIM2_IRQHandler
+  *         This function handles Timer2 Handler.
+  * @param  None
+  * @retval None
+  */
+void TIM2_IRQHandler(void)
+{
+  USB_OTG_BSP_TimerIRQ();
+}
+
+
+/**
+  * @brief  OTG_FS_IRQHandler
+  *          This function handles USB-On-The-Go FS global interrupt request.
+  *          requests.
+  * @param  None
+  * @retval None
+  */
+
+void OTG_FS_IRQHandler(void)
+{
+  USBH_OTG_ISR_Handler(&USB_OTG_Core);
+}
+
+
 
 
 

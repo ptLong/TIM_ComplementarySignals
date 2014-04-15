@@ -1,15 +1,24 @@
 #ifndef __MAIN_H
 #define __MAIN_H
 #include "stm32f4_discovery.h"
+
 #include "float.h"
 #include "math.h"
 #include "hd44780.h"
 #include "bitband.h"
+#include "GES_Solar_RTC.h"
 
 
-#define BATT_FULL_VOLTAGE	29.8
+
+
+#include "usbh_core.h"
+#include "usbh_usr.h"
+#include "usbh_msc_core.h"
+
+
+#define BATT_FULL_VOLTAGE	29.5
 #define CHARGER_STOP_VOLTAGE	BATT_FULL_VOLTAGE
-#define CHARGER_START_VOLTAGE	27.2
+#define CHARGER_START_VOLTAGE	26.5
 
 //#define USE_STDPERIPH_DRIVER
 //#define STM32F4XX
@@ -96,7 +105,7 @@ struct SolarMPPT	{
 	uint16_t			num_of_samples;	//number of samples to get average
 	uint16_t 			num_of_MPPT_points;
 	uint16_t			current_max_MPPT_point;
-	
+
 	float 			feedback_value[88];
 	float			feedback_local_current;
 	float			feedback_local_up;
@@ -111,11 +120,15 @@ struct SolarMPPT	{
 	uint16_t 			current_PWM_charger;
 	uint16_t			manual_PWM_charger;
 	float			current_max_MPPT_value;
-	
+
 
 	unsigned int 		do_global_MPPT:1;
 	unsigned int		do_local_MPPT:1;
+	unsigned int		do_data_logging:1;
 	unsigned int 		en_manual_MPPT:1;
+	unsigned int		min_change:1;
+	uint8_t			last_min;
+	uint8_t			curr_min;
 
 	unsigned int		batt_full:1;
 
@@ -137,7 +150,7 @@ struct SolarMPPTGlobalVar {
 	unsigned int ms10_flag:1;
 	unsigned int ms100_flag:1;
 	unsigned int ms1000_flag:1;
-	
+
 	unsigned int userBit1:1;
 	unsigned int userBit2:1;
 	unsigned int enable_auto_adc:1;
@@ -169,6 +182,10 @@ struct Test_Float_Math {
 extern uint32_t SystemCoreClock;
 extern struct SolarMPPTGlobalVar MPPTVars;
 
+extern USB_OTG_CORE_HANDLE          USB_OTG_Core;
+extern USBH_HOST                    USB_Host;
+
+
 void Delay(__IO uint32_t);
 void Cpu_enter_default_config(void);
 void Ports_enter_default_config(void);
@@ -180,6 +197,7 @@ void set_PWM_charger(uint16_t pwm);
 void EnableSolarCharger(void);
 void DisableSolarCharger(void);
 void DisplayLCD(void);
-void Rtc_enter_default_config(void);
 
+void Usb_enter_default_config(void);
+void GES_Solar_Log_Data(void);
 #endif

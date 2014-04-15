@@ -170,6 +170,8 @@
           <name>CCDefines</name>
           <state>USE_STDPERIPH_DRIVER</state>
           <state>STM32F4XX</state>
+          <state>USE_USB_OTG_FS</state>
+          <state>USE_STM32F4DISCOVERY</state>
         </option>
         <option>
           <name>CCPreprocFile</name>
@@ -302,7 +304,11 @@
           <state>$PROJ_DIR$\..\..\..\..\Libraries\CMSIS\Include</state>
           <state>$PROJ_DIR$\..\..\..\..\Libraries\CMSIS\ST\STM32F4xx\Include</state>
           <state>$PROJ_DIR$\..\..\..\..\Libraries\STM32F4xx_StdPeriph_Driver\inc</state>
+          <state>$PROJ_DIR$\..\..\..\..\Libraries\STM32_USB_OTG_Driver\inc</state>
+          <state>$PROJ_DIR$\..\..\..\..\Libraries\STM32_USB_HOST_Library\Class\MSC\inc</state>
+          <state>$PROJ_DIR$\..\..\..\..\Libraries\STM32_USB_HOST_Library\Core\inc</state>
           <state>$PROJ_DIR$\..\..\..\..\Utilities\STM32F4-Discovery</state>
+          <state>$PROJ_DIR$\..\..\..\..\Utilities\Third_Party\fat_fs\inc</state>
         </option>
         <option>
           <name>CCStdIncCheck</name>
@@ -569,7 +575,7 @@
         <option>
           <name>OOCOutputFormat</name>
           <version>2</version>
-          <state>0</state>
+          <state>1</state>
         </option>
         <option>
           <name>OCOutputOverride</name>
@@ -577,7 +583,7 @@
         </option>
         <option>
           <name>OOCOutputFile</name>
-          <state>TIM_ComplementarySignals.srec</state>
+          <state>TIM_ComplementarySignals.hex</state>
         </option>
         <option>
           <name>OOCCommandLineProducer</name>
@@ -585,7 +591,7 @@
         </option>
         <option>
           <name>OOCObjCopyEnable</name>
-          <state>0</state>
+          <state>1</state>
         </option>
       </data>
     </settings>
@@ -930,6 +936,15 @@
     </file>
   </group>
   <group>
+    <name>FAT_FS</name>
+    <file>
+      <name>$PROJ_DIR$\..\..\..\..\Utilities\Third_Party\fat_fs\src\fattime.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\..\..\Utilities\Third_Party\fat_fs\src\ff.c</name>
+    </file>
+  </group>
+  <group>
     <name>STM32F4-Discovery</name>
     <file>
       <name>$PROJ_DIR$\..\..\..\..\Utilities\STM32F4-Discovery\stm32f4_discovery.c</name>
@@ -1032,9 +1047,63 @@
     </file>
   </group>
   <group>
+    <name>USB_Host</name>
+    <group>
+      <name>Class</name>
+      <group>
+        <name>MSC</name>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\Libraries\STM32_USB_HOST_Library\Class\MSC\src\usbh_msc_bot.c</name>
+        </file>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\Libraries\STM32_USB_HOST_Library\Class\MSC\src\usbh_msc_core.c</name>
+        </file>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\Libraries\STM32_USB_HOST_Library\Class\MSC\src\usbh_msc_fatfs.c</name>
+        </file>
+        <file>
+          <name>$PROJ_DIR$\..\..\..\..\Libraries\STM32_USB_HOST_Library\Class\MSC\src\usbh_msc_scsi.c</name>
+        </file>
+      </group>
+    </group>
+    <group>
+      <name>Core</name>
+      <file>
+        <name>$PROJ_DIR$\..\..\..\..\Libraries\STM32_USB_HOST_Library\Core\src\usbh_core.c</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\..\..\..\..\Libraries\STM32_USB_HOST_Library\Core\src\usbh_hcs.c</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\..\..\..\..\Libraries\STM32_USB_HOST_Library\Core\src\usbh_ioreq.c</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\..\..\..\..\Libraries\STM32_USB_HOST_Library\Core\src\usbh_stdreq.c</name>
+      </file>
+    </group>
+    <group>
+      <name>Driver</name>
+      <file>
+        <name>$PROJ_DIR$\..\..\..\..\Libraries\STM32_USB_OTG_Driver\src\usb_core.c</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\..\..\..\..\Libraries\STM32_USB_OTG_Driver\src\usb_hcd.c</name>
+      </file>
+      <file>
+        <name>$PROJ_DIR$\..\..\..\..\Libraries\STM32_USB_OTG_Driver\src\usb_hcd_int.c</name>
+      </file>
+    </group>
+  </group>
+  <group>
     <name>User</name>
     <file>
       <name>$PROJ_DIR$\..\bitband.h</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\GES_Solar_RTC.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\GES_Solar_RTC.h</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\HD44780.c</name>
@@ -1054,10 +1123,22 @@
     <file>
       <name>$PROJ_DIR$\..\system_stm32f4xx.c</name>
     </file>
+    <file>
+      <name>$PROJ_DIR$\..\usb_bsp.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\usb_conf.h</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\usbh_conf.h</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\usbh_usr.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\usbh_usr.h</name>
+    </file>
   </group>
-  <file>
-    <name>$PROJ_DIR$\..\..\..\..\..\..\..\..\..\InverterAKien\F4\STM32F4xx_DSP_StdPeriph_Lib_V1.0.1\Project\STM32F4xx_StdPeriph_Examples\ADC\DualADC_RegulSimu_DMAmode1</name>
-  </file>
 </project>
 
 
