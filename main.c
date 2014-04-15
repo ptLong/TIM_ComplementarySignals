@@ -20,8 +20,37 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
+#include <stdio.h>
+#include <string.h>
+#include <stdarg.h>
+#include <stdlib.h>
 
 #include "main.h"
+
+
+
+/** @defgroup USBH_USR_MAIN_Private_Variables
+* @{
+*/
+#ifdef USB_OTG_HS_INTERNAL_DMA_ENABLED
+  #if defined ( __ICCARM__ ) /*!< IAR Compiler */
+    #pragma data_alignment=4
+  #endif
+#endif /* USB_OTG_HS_INTERNAL_DMA_ENABLED */
+__ALIGN_BEGIN USB_OTG_CORE_HANDLE      USB_OTG_Core __ALIGN_END;
+
+#ifdef USB_OTG_HS_INTERNAL_DMA_ENABLED
+  #if defined ( __ICCARM__ ) /*!< IAR Compiler */
+    #pragma data_alignment=4
+  #endif
+#endif /* USB_OTG_HS_INTERNAL_DMA_ENABLED */
+__ALIGN_BEGIN USBH_HOST                USB_Host __ALIGN_END;
+/**
+* @}
+*/
+
+
+
 
 /** @addtogroup STM32F4_Discovery_Peripheral_Examples
   * @{
@@ -52,7 +81,7 @@
 
 
 #define ADC_COUNTS_FOR_IBATT_0A		528//472	//ACS755xCB-100 zero current out= 0.6V
-#define ADC_COUNTS_FOR_IBATT_100A	3788
+#define ADC_COUNTS_FOR_IBATT_100A	3888
 #define ADC_COUNTS_FOR_IBATT_1A	\
 				((float)(ADC_COUNTS_FOR_IBATT_100A-ADC_COUNTS_FOR_IBATT_0A)/100)
 
@@ -86,8 +115,13 @@ struct Test_Float_Math test_float_math = {
 struct SolarMPPT SolarCharger = {
 	.num_of_MPPT_points = 168,
 	.do_global_MPPT =1,
+	.do_data_logging=0,
 
 };
+
+
+FATFS Sol_fs;
+FIL Sol_log_file;
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -117,11 +151,11 @@ uint16_t find_global_MPPT_point(struct SolarMPPT * vars){
 	num_of_MPPT_points_todo = vars->num_of_MPPT_points/3;// + vars->num_of_MPPT_points/25;
 	delta_PWM = 1000 / vars->num_of_MPPT_points;
 	vars->current_max_MPPT_value = 0;
-	printf("---begin global MPPT --- \n");
+	/////printf("---begin global MPPT --- \n");
 	for(i=5; i< num_of_MPPT_points_todo; i++){
 		set_PWM_charger(i*delta_PWM);
 		vars->feedback_value[i] = get_current_feedback();
-		printf("%.2f at %d \n", vars->feedback_value[i], i*delta_PWM);
+		/////printf("%.2f at %d \n", vars->feedback_value[i], i*delta_PWM);
 		if (vars->current_max_MPPT_value < vars->feedback_value[i]){
 			vars->current_max_MPPT_value = vars->feedback_value[i];
 			vars->current_max_MPPT_point = i;
@@ -129,7 +163,7 @@ uint16_t find_global_MPPT_point(struct SolarMPPT * vars){
 	}
 
 	set_PWM_charger(vars->current_max_MPPT_point*delta_PWM);
-	printf("max at %d: %d %.2f \n", vars->current_max_MPPT_point, vars->current_max_MPPT_point*delta_PWM, vars->current_max_MPPT_value);
+	/////printf("max at %d: %d %.2f \n", vars->current_max_MPPT_point, vars->current_max_MPPT_point*delta_PWM, vars->current_max_MPPT_value);
 
 
 
@@ -139,7 +173,7 @@ uint16_t current_PWM, up_PWM, down_PWM, upup_PWM, downdown_PWM;
 
 uint16_t find_local_MPPT_point(struct SolarMPPT * vars){
 	const uint16_t delta_PWM = 8;
-	
+
 
 	current_PWM = vars->current_PWM_charger;
 	up_PWM = current_PWM + delta_PWM;
@@ -149,7 +183,7 @@ uint16_t find_local_MPPT_point(struct SolarMPPT * vars){
 	if((down_PWM<18) || (downdown_PWM<18)){
 		down_PWM = 18;
 		downdown_PWM = 18;
-		
+
 	}
 
 	//set_PWM_charger(current_PWM);
@@ -166,25 +200,27 @@ uint16_t find_local_MPPT_point(struct SolarMPPT * vars){
 	//vars->feedback_local_down = get_current_feedback();
 
 	set_PWM_charger(current_PWM); //very important to set PWM back to current
-	
+
 	if(vars->feedback_local_current < vars->feedback_local_down)
 	{
-		printf("---down local MPPT --- \n");
-		printf("%.2f %.2f %.2f \n", 
-				vars->feedback_local_down, 
-				vars->feedback_local_current, 
+		/////printf("---down local MPPT --- \n");
+		/*////printf("%.2f %.2f %.2f \n",
+				vars->feedback_local_down,
+				vars->feedback_local_current,
 				vars->feedback_local_up);
-		printf("%d %d %d \n", down_PWM, current_PWM, up_PWM);
+				*/
+		/////printf("%d %d %d \n", down_PWM, current_PWM, up_PWM);
 		set_PWM_charger(current_PWM-1);
 	}
 	if( vars->feedback_local_current < vars->feedback_local_up)
 	{
-		printf("---up local MPPT --- \n");
-		printf("%.2f %.2f %.2f \n", 
-				vars->feedback_local_down, 
-				vars->feedback_local_current, 
+		/////printf("---up local MPPT --- \n");
+		/*////printf("%.2f %.2f %.2f \n",
+				vars->feedback_local_down,
+				vars->feedback_local_current,
 				vars->feedback_local_up);
-		printf("%d %d %d \n", down_PWM, current_PWM, up_PWM);
+		*/
+		/////printf("%d %d %d \n", down_PWM, current_PWM, up_PWM);
 		set_PWM_charger(current_PWM+1);
 	}
 
@@ -211,65 +247,102 @@ int main(void)
 	// SETUP all Ports
 	Ports_enter_default_config();
 
+	Usb_enter_default_config();
+
 	Timers_enter_default_config();
 
 	Adc_enter_default_config();
 
-  	_delay_ms(200);
-	LCD_Init();
+	RTC_to_default_state();
 
+  	_delay_ms(100);
+	LCD_Init();
 
 
 	SolarCharger.current_PWM_charger = 288;
   while (1)
   {
+  	/* Host Task handler TODO: Put in a timer interupt
+  	to make sure USBH_Process(..) is called frequently*/
+    	USBH_Process(&USB_OTG_Core, &USB_Host);
+
   	//MPPTVars.userBit1 = GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_0);
+  	RTC_GetTime(RTC_Format_BIN, &RTC_TimeStructure);
+  	RTC_GetDate(RTC_Format_BIN, &RTC_DateStructure);
+	if(SolarCharger.curr_min != RTC_TimeStructure.RTC_Minutes){
+		SolarCharger.last_min = SolarCharger.curr_min;
+		SolarCharger.curr_min = RTC_TimeStructure.RTC_Minutes;
+		SolarCharger.min_change = 1;
+	}
+
+
 	DisplayLCD();
 
-	if(MPPTVars.enable_VSolar_in){
+
+
+	if((RTC_TimeStructure.RTC_Hours>14) && (RTC_TimeStructure.RTC_Hours<=23)){
 		DIGITAL_OUTPUT_HIGH(D_OUT1);
 	} else {
 		DIGITAL_OUTPUT_LOW(D_OUT1);
 	}
-	
+
+
+	if(STM_EVAL_PBGetState(BUTTON_USER)){
+		//GPIOA->ODR ^= GPIO_Pin_0;
+		//STM_EVAL_LEDToggle(Led_TypeDef Led)
+		//GES_Solar_Log_Data();
+	}else {
+
+	}
+
+
+
 	//all 100ms tasks go here
 	if(MPPTVars.ms100_flag){
 		MPPTVars.ms100_flag = 0;
 		cal_adc();
 	}
 
-	
+	if((RTC_TimeStructure.RTC_Minutes%5==0) && (SolarCharger.min_change==1) ){
+		SolarCharger.min_change = 0;
+
+		SolarCharger.do_data_logging=1;
+		if(!SolarCharger.batt_full)
+			SolarCharger.do_global_MPPT = 1;
+	}
 	if(MPPTVars.ms1000_flag){
 		MPPTVars.ms1000_flag = 0;
-
 		MPPTVars.sec_cnt++;
-		if(MPPTVars.sec_cnt == 288){
+		if(MPPTVars.sec_cnt == 300){
 			MPPTVars.sec_cnt = 0;
-			if(!SolarCharger.batt_full)
-				SolarCharger.do_global_MPPT = 1;
+
 		} else if( (MPPTVars.sec_cnt % 3) == 0){
 			if(!SolarCharger.batt_full)
 				SolarCharger.do_local_MPPT = 1;
-				while (ITM_Port32(1) == 0);
-					ITM_Port32(1) = (unsigned int)'8';
+				//while (ITM_Port32(1) == 0);
+					//ITM_Port32(1) = (unsigned int)'8';
 		}
 	}
 	//SET_PULSE_CHANNEL_A(Channel1Pulse);
 
 	//SET_PULSE_CHANNEL_B(Channel2Pulse);
 
-	
+	if(SolarCharger.do_data_logging){
+		GES_Solar_Log_Data();
+		SolarCharger.do_data_logging=0;
+	}
 	if(SolarCharger.do_global_MPPT){
 		find_global_MPPT_point(&SolarCharger);
 		SolarCharger.do_global_MPPT = 0;
 	}
+
 	if(SolarCharger.do_local_MPPT){
 		find_local_MPPT_point(&SolarCharger);
 		SolarCharger.do_local_MPPT = 0;
 	}
 	if(SolarCharger.en_manual_MPPT){
 		set_PWM_charger(SolarCharger.manual_PWM_charger);
-		
+
 		if(GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_0)){
 			SolarCharger.manual_PWM_charger+=1;
 			_delay_ms(300);
@@ -278,9 +351,10 @@ int main(void)
 		}
 		MPPTVars.sec_cnt = 0;
 	} else {
+		LCD_GotoXY(18,2);
 		if(GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_0)){
 			LCD_printf("1");
-			SolarCharger.do_global_MPPT= 1;
+			//SolarCharger.do_global_MPPT= 1;
 		} else {
 			LCD_printf("0");
 		}
@@ -295,39 +369,109 @@ int main(void)
 		EnableSolarCharger();
 	};
 
-	
+
   }
 }
 
 void DisplayLCD(void){
-	LCD_GotoXY(0,0);
-	LCD_printf("PS= %.0fW ", MPPTVars.PSolar);
-	LCD_GotoXY(10,0);
-	LCD_printf("PB= %.0fW", MPPTVars.PBatt);
 	LCD_GotoXY(0,1);
-	LCD_printf("Solar= %.2fV %.2fA ", MPPTVars.VSolar, MPPTVars.ISolar, MPPTVars.PSolar);
+	LCD_printf("Solar=%.1fV ", MPPTVars.VSolar);
+	LCD_GotoXY(11,1);
+	LCD_printf(" P= %.0fW", MPPTVars.PBatt);
+	LCD_GotoXY(0,0);
+	//LCD_printf("Solar= %.2fV %.2fA ", MPPTVars.VSolar, MPPTVars.ISolar, MPPTVars.PSolar);
+
+	LCD_printf("%0.2d %0.2d:%0.2d:%0.2d %.1fA ",RTC_DateStructure.RTC_Date,
+				RTC_TimeStructure.RTC_Hours,
+		   		RTC_TimeStructure.RTC_Minutes,
+				RTC_TimeStructure.RTC_Seconds,
+				MPPTVars.ISolar);
 
 	LCD_GotoXY(0,2);
-	LCD_printf("Batt=  %.2fV %.2fA ",MPPTVars.VBatt, MPPTVars.IBatt, MPPTVars.PBatt);
+	LCD_printf("Batt= %.1fV %.1fA ",MPPTVars.VBatt, MPPTVars.IBatt, MPPTVars.PBatt);
 
 	LCD_GotoXY(0,3);
 	LCD_printf("%5d", msTicks);
 
 	LCD_GotoXY(6,3);
 	LCD_printf("%5d",TIM1->CCR1);
-	
+
 	LCD_GotoXY(5,3);
 
-	
+
 	LCD_GotoXY(12,3);
 	if(SolarCharger.batt_full){
-		
+
 		LCD_printf("BattFull");
-	} else {
+	} else {
+
 		LCD_printf("Charging");
 	}
-	
+
 }
+
+// printf like function for the LCD screen
+void get_string( uint8_t* ret, const uint8_t* format, ... ) {
+    va_list args;
+    //char        string[88];
+
+    va_start( args, format );
+    vsprintf( ret, format, args );
+    va_end( args );
+    //LCD_Print( string );
+}
+
+char log_str[38];
+
+void GES_Solar_Log_Data(void)
+{
+	int ret;
+
+
+	printf("> Writing Solar Log file ...\n");
+	//check for Write protect
+	if(USBH_MSC_Param.MSWriteProtect == DISK_WRITE_PROTECTED)
+	{
+		printf( "> Disk flash is write protected \n");
+		USBH_USR_ApplicationState = USH_USR_FS_LOGGING;
+		return;
+	}
+
+	/* Register work area for logical drives (malloc)*/
+	f_mount(0, &Sol_fs);
+
+	if(f_open(&Sol_log_file, "0:GES_Sol.TXT",FA_OPEN_ALWAYS | FA_READ | FA_WRITE) == FR_OK)
+	{
+		get_string(log_str, "%0.2d:%0.2d:%0.2d:%0.2d::%.1f:%.1f:%.1f:%.1f\n",
+						RTC_DateStructure.RTC_Date,
+						RTC_TimeStructure.RTC_Hours,
+						RTC_TimeStructure.RTC_Minutes,
+						RTC_TimeStructure.RTC_Seconds,
+						MPPTVars.VBatt,
+						MPPTVars.IBatt,
+						MPPTVars.VSolar,
+						MPPTVars.ISolar);
+
+		f_lseek(&Sol_log_file, Sol_log_file.fsize);
+		ret = f_printf(&Sol_log_file, log_str);
+
+
+		if(ret == -1) /*EOF or Error*/{
+			printf(">CANNOT log data\n");
+		} else {
+			printf("> data logged\n");
+		}
+
+			 /*close file and filesystem*/
+		f_close(&Sol_log_file);
+	} else {
+		printf(">f_open != FR_OK\n");
+	}
+
+	f_mount(0, NULL);
+
+}
+
 
 void set_PWM_charger(uint16_t pwm){
 
@@ -343,11 +487,11 @@ void set_PWM_charger(uint16_t pwm){
 	}
 
 	SET_PULSE_CHANNEL_A(pulse);
-	
+
 }
 
 
-#define DELTA_ADC_CNT 	300	
+#define DELTA_ADC_CNT 	300
 volatile int testPoint;
 
 void cal_adc()
@@ -360,7 +504,7 @@ void cal_adc()
 	for (i=0; i<ADC_NUM_OF_CHANNEL; i++){
 		ADCSum=0;
 		for(j=i; j<ADC_BUFF_SIZE; j += ADC_NUM_OF_CHANNEL){
-		
+
 			ADCSum+= ADC12DualConvertedBuff[j];
 		}
 		ADCRaw_avg[i] = ADCSum/ADC_NUM_OF_SAMPLE;
@@ -370,26 +514,26 @@ void cal_adc()
 	for (i=0; i<ADC_NUM_OF_CHANNEL; i++){
 		ADCSum=0;
 		num_of_out_adc_range_value = 0;
-		
+
 		for(j=i; j<ADC_BUFF_SIZE; j += ADC_NUM_OF_CHANNEL){
 			tmp_buff = ADC12DualConvertedBuff[j];
-			
+
 			//check for out of range ADC value
 			if((((int32_t)ADCRaw_avg[i] - tmp_buff)>DELTA_ADC_CNT)
 				|| ((tmp_buff - (int32_t)ADCRaw_avg[i])>DELTA_ADC_CNT)) {
 				num_of_out_adc_range_value +=1;
 
 			} else {
-				
+
 				ADCSum+= tmp_buff;
 			}
 		}
-		
+
 		ADCRaw_avg[i] = ADCSum/(ADC_NUM_OF_SAMPLE-num_of_out_adc_range_value);
 	}
-	
+
 	*/
-	
+
 	testPoint = 0;
 
 	MPPTVars.VBatt = (float)ADCRaw_avg[1]/ADC_COUNTS_FOR_VBATT_1V;
@@ -503,14 +647,59 @@ void Ports_enter_default_config(void)
 	//GPIO_PinAFConfig(GPIOA, GPIO_PinSource10, GPIO_AF_TIM1);
 	//GPIO_PinAFConfig(GPIOB, GPIO_PinSource12, GPIO_AF_TIM1);
 	GPIO_PinAFConfig(GPIOB, GPIO_PinSource13, GPIO_AF_TIM1);
-	GPIO_PinAFConfig(GPIOB, GPIO_PinSource14, GPIO_AF_TIM1);
+	////GPIO_PinAFConfig(GPIOB, GPIO_PinSource14, GPIO_AF_TIM1);
 	//GPIO_PinAFConfig(GPIOB, GPIO_PinSource15, GPIO_AF_TIM1);
-	GPIO_PinAFConfig(GPIOE, GPIO_PinSource11, GPIO_AF_TIM1);
+	////GPIO_PinAFConfig(GPIOE, GPIO_PinSource11, GPIO_AF_TIM1);
 
+/***LCD required ports************************/
 	//LCD port init
 	LCD_port_init();
+	//D:0 2 4 6
+	//E:1 3
+	//B:9
+
+/***USB required ports ***********************/
+	//RCC_AHB1PeriphClockCmd( RCC_AHB1Periph_GPIOA , ENABLE);
+
+	/* Configure DM DP Pins */
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_11 |
+							GPIO_Pin_12;
+
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
+	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL ;
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	GPIO_PinAFConfig(GPIOA,GPIO_PinSource11,GPIO_AF_OTG1_FS) ;
+	GPIO_PinAFConfig(GPIOA,GPIO_PinSource12,GPIO_AF_OTG1_FS) ;
 
 
+	//VBUS_FS
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_9;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
+	GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL ;
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
+
+
+	/* this for ID line debug */
+	GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_10;
+	GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP ;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	GPIO_PinAFConfig(GPIOA,GPIO_PinSource10,GPIO_AF_OTG1_FS) ;
+
+	//C0 to enable 5V output
+	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOC, ENABLE);
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
+	GPIO_InitStructure.GPIO_OType = GPIO_OType_OD;
+	GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_Init(GPIOC, &GPIO_InitStructure);
+	GPIO_SetBits(GPIOC, GPIO_Pin_0);  //default disable VBUS
 }
 
 
@@ -582,7 +771,7 @@ void DisableSolarCharger(void){
 	TIM_Cmd(TIM1, DISABLE);
 	TIM_SetCounter(TIM1,0);
 	TIM_CtrlPWMOutputs(TIM1,DISABLE);
-	
+
 }
 
 ADC_InitTypeDef 	  ADC_InitStructure;
@@ -661,12 +850,16 @@ void Adc_enter_default_config(void)
 
 
 
-
-
-void Rtc_enter_default_config(void){
-
-
+void Usb_enter_default_config(void){
+	  /* Init Host Library */
+	  USBH_Init(&USB_OTG_Core,
+	            USB_OTG_FS_CORE_ID,
+	            &USB_Host,
+	            &USBH_MSC_cb,
+	            &USR_cb);
 }
+
+
 
 
 #ifdef  USE_FULL_ASSERT
